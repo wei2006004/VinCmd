@@ -1,8 +1,8 @@
 from vincmd import command, argument
-from vincmd import process
+from vincmd import group, child_command
 
 
-@command()
+@command
 @argument('-a', '--all', action='store_true')
 @argument('-b', '--boot', help='boot text')
 @argument('-n', '--name', dest='nick_name')
@@ -12,32 +12,38 @@ def hello(all, boot, nick_name):
     print(nick_name)
 
 
-@command(is_child = True)
+@child_command
 @argument('-b', '--boot', help='boot text')
 @argument('-n', '--name', dest='nick_name')
-def apple(boot, nick_name):
+def demo_apple(boot, nick_name):
     print('apple')
     print(boot)
     print(nick_name)
 
 
-@command(is_child = True)
+@child_command
 @argument('-b', '--boot', help='boot text')
 @argument('-n', '--name', dest='nick_name')
-def dog(boot, nick_name):
-    print('apple')
+def demo_dog(boot, nick_name):
+    print('dog')
     print(boot)
     print(nick_name)
 
 
-@process(commands=[apple, dog])
-@argument('-c', '--cat', action='store_true')
-@argument('-f', '--file')
-def demo(cat, file):
-    print(cat)
-    print(file)
-    return True
+@group(commands=[
+    {
+        'exec': demo_apple,
+        'cmd': 'apple'
+    }, {
+        'exec': demo_dog,
+        'cmd': 'dog'
+    }])
+def demo_group():
+    print('before group')
 
 
 if __name__ == '__main__':
-    hello()
+    # hello(sys_argv=True)
+    # hello(True, 'boooo', 'vinson')
+
+    demo_group(sys_argv=True)

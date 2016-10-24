@@ -4,25 +4,91 @@ import sys
 
 _parsers = {}
 
+SYS_ARGV_TAG = 'sys_argv'
 
-def _getParserByFunctionName(name):
+
+def getParserByFunctionName(name):
     if name not in _parsers.keys():
         _parsers[name] = ArgumentParser()
     return _parsers[name]
 
 
-class CommandDecorator:
-    def __init__(self, is_child=False):
-        self.is_child = is_child
-
-    def __call__(self, fun):
-        @wraps(fun)
-        def wrapper():
-            parser = _getParserByFunctionName(fun.__name__)
+def command(fun):
+    @wraps(fun)
+    def wrapper(*args, **kwargs):
+        if SYS_ARGV_TAG in kwargs.keys() and kwargs[SYS_ARGV_TAG]:
+            parser = getParserByFunctionName(fun.__name__)
             value = parser.parse_args(sys.argv[1:])
             return fun(**value.__dict__)
+        return fun(*args, **kwargs)
+
+    return wrapper
+
+
+def child_command(fun):
+    @wraps(fun)
+    def wrapper(*args, **kwargs):
+        if SYS_ARGV_TAG in kwargs.keys() and kwargs[SYS_ARGV_TAG]:
+            parser = getParserByFunctionName(fun.__name__)
+            value = parser.parse_args(sys.argv[1:])
+            return fun(**value.__dict__)
+        return fun(*args, **kwargs)
+
+    return wrapper
+
+
+class ChildCmdMgr:
+    EXEC_TAG = 'exec'
+    CMD_TAG = 'cmd'
+
+    def __init__(self, commands):
+        if not isinstance(commands, list):
+            raise TypeError('Child commands must be list.')
+
+        for command in commands:
+            if self.EXEC_TAG not in command.keys():
+                raise SyntaxError('wrong group commands')
+        self.commands = commands
+
+    def getChildFunction(self, cmd):
+        for command in self.commands:
+            if self.CMD_TAG in command.keys():
+                if cmd == command[self.CMD_TAG]:
+                    return command[self.EXEC_TAG]
+                else:
+                    continue
+            else:
+                if cmd == command[self.EXEC_TAG].__name__:
+                    return command[self.EXEC_TAG]
+        return None
+
+
+class GroupDecorator:
+    def __init__(self, commands):
+        self.cmdMgr = ChildCmdMgr(commands)
+
+    def __call__(self, fun):
+
+        @wraps(fun)
+        def wrapper(sys_argv=False):
+            if not sys_argv:
+                fun()
+                return None
+            if len(sys.argv) <= 1:
+                self.printUsage()
+                return None
+            childFun = self.cmdMgr.getChildFunction(sys.argv[1])
+            if not childFun:
+                raise SyntaxError('wrong cmd')
+            fun()
+            parser = getParserByFunctionName(childFun.__name__)
+            value = parser.parse_args(sys.argv[2:])
+            return childFun(**value.__dict__)
 
         return wrapper
+
+    def printUsage(self):
+        print('no agrv')
 
 
 class ArgumentDecorator:
@@ -31,56 +97,11 @@ class ArgumentDecorator:
         self.kwargs = kwargs
 
     def __call__(self, fun):
-        parser = _getParserByFunctionName(fun.__name__)
+        parser = getParserByFunctionName(fun.__name__)
         parser.add_argument(*self.args, **self.kwargs)
 
         @wraps(fun)
         def wrapper(*args, **kwargs):
             return fun(*args, **kwargs)
-
-        return wrapper
-
-
-_processes = {}
-
-
-def _addProcessCmds(process_name, commands):
-    if process_name not in _processes.keys():
-        _processes[process_name] = commands
-    else:
-        cmds = _processes[process_name]
-        cmds.append(commands)
-
-
-def _getProcessCmds(process_name):
-    if process_name not in _processes.keys():
-        return []
-    else:
-        return _processes[process_name]
-
-
-def _enterProcessLoop(process_name):
-    while True:
-        cmd = input('>>')
-        # todo
-    pass
-
-
-class ProcessDecorator:
-    def __init__(self, commands):
-        if not isinstance(commands, list):
-            raise TypeError('Child commands must be list.')
-        self.commands = commands
-
-    def __call__(self, fun):
-        _addProcessCmds(fun.__name__, self.commands)
-
-        @wraps(fun)
-        def wrapper():
-            parser = _getParserByFunctionName(fun.__name__)
-            ret = fun(**parser.__dict__)
-            if ret:
-                _enterProcessLoop(fun.__name__)
-            return ret
 
         return wrapper
