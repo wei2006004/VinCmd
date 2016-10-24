@@ -1,0 +1,1 @@
+from .cmd import CommandDecorator as command, ArgumentDecorator as argument, ProcessDecorator as process
