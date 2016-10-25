@@ -3,6 +3,18 @@ from vincmd.cmd import getParserByFunctionName, ChildCmdMgr, SYS_ARGV_TAG
 import sys
 
 
+def child_command(fun):
+    @wraps(fun)
+    def wrapper(*args, **kwargs):
+        if SYS_ARGV_TAG in kwargs.keys() and kwargs[SYS_ARGV_TAG]:
+            parser = getParserByFunctionName(fun.__name__)
+            value = parser.parse_args(sys.argv[1:])
+            return fun(**value.__dict__)
+        return fun(*args, **kwargs)
+
+    return wrapper
+
+
 class ProcessDecorator:
     def __init__(self, commands):
         self.cmdMgr = ChildCmdMgr(commands)
@@ -17,20 +29,19 @@ class ProcessDecorator:
             if cmdlist[0] == 'exit':
                 break
             childFun = self.cmdMgr.getChildFunction(cmdlist[0])
+            parser = getParserByFunctionName(childFun.__name__)
             if not childFun:
                 self._printHelpInfo()
-                continue
-            parser = getParserByFunctionName(childFun.__name__)
-            if '-h' in cmdlist or '--help' in cmdlist:
+            elif '-h' in cmdlist or '--help' in cmdlist:
                 parser.print_help()
-                continue
-            value = parser.parse_args(cmdlist[1:])
-            childFun(**value.__dict__)
+            else:
+                value = parser.parse_args(cmdlist[1:])
+                childFun(**value.__dict__)
 
     def __call__(self, fun):
 
         @wraps(fun)
-        def wrapper(*args,**kwargs):
+        def wrapper(*args, **kwargs):
             if SYS_ARGV_TAG in kwargs.keys() and kwargs[SYS_ARGV_TAG]:
                 parser = getParserByFunctionName(fun.__name__)
                 value = parser.parse_args(sys.argv[1:])

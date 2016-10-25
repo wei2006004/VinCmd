@@ -1,5 +1,5 @@
 from vincmd import command, argument
-from vincmd import group, child_command
+from vincmd import group
 
 
 @command
@@ -12,7 +12,7 @@ def hello(all, boot, nick_name):
     print(nick_name)
 
 
-@child_command
+@command
 @argument('-b', '--boot', help='boot text')
 @argument('-n', '--name', dest='nick_name')
 def demo_apple(boot, nick_name):
@@ -21,7 +21,7 @@ def demo_apple(boot, nick_name):
     print(nick_name)
 
 
-@child_command
+@command
 @argument('-b', '--boot', help='boot text')
 @argument('-n', '--name', dest='nick_name')
 def demo_dog(boot, nick_name):

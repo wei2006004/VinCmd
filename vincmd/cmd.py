@@ -25,18 +25,6 @@ def command(fun):
     return wrapper
 
 
-def child_command(fun):
-    @wraps(fun)
-    def wrapper(*args, **kwargs):
-        if SYS_ARGV_TAG in kwargs.keys() and kwargs[SYS_ARGV_TAG]:
-            parser = getParserByFunctionName(fun.__name__)
-            value = parser.parse_args(sys.argv[1:])
-            return fun(**value.__dict__)
-        return fun(*args, **kwargs)
-
-    return wrapper
-
-
 class ChildCmdMgr:
     EXEC_TAG = 'exec'
     CMD_TAG = 'cmd'
