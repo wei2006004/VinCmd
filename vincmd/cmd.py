@@ -7,7 +7,12 @@ _parsers = {}
 SYS_ARGV_TAG = 'sys_argv'
 
 
-def getParserByFunctionName(name):
+def getParserByFunction(fun):
+    name = fun.__qualname__
+    return _getParserByName(name)
+
+
+def _getParserByName(name):
     if name not in _parsers.keys():
         _parsers[name] = ArgumentParser()
     return _parsers[name]
@@ -17,7 +22,7 @@ def command(fun):
     @wraps(fun)
     def wrapper(*args, **kwargs):
         if SYS_ARGV_TAG in kwargs.keys() and kwargs[SYS_ARGV_TAG]:
-            parser = getParserByFunctionName(fun.__name__)
+            parser = getParserByFunction(fun)
             value = parser.parse_args(sys.argv[1:])
             return fun(**value.__dict__)
         return fun(*args, **kwargs)
@@ -25,7 +30,7 @@ def command(fun):
     return wrapper
 
 
-class ChildCmdMgr:
+class _GroupCmdMgr:
     EXEC_TAG = 'exec'
     CMD_TAG = 'cmd'
 
@@ -53,7 +58,7 @@ class ChildCmdMgr:
 
 class GroupDecorator:
     def __init__(self, commands):
-        self.cmdMgr = ChildCmdMgr(commands)
+        self.cmdMgr = _GroupCmdMgr(commands)
 
     def __call__(self, fun):
 
@@ -69,7 +74,7 @@ class GroupDecorator:
             if not childFun:
                 raise SyntaxError('wrong cmd')
             fun()
-            parser = getParserByFunctionName(childFun.__name__)
+            parser = getParserByFunction(childFun)
             value = parser.parse_args(sys.argv[2:])
             return childFun(**value.__dict__)
 
@@ -85,7 +90,7 @@ class ArgumentDecorator:
         self.kwargs = kwargs
 
     def __call__(self, fun):
-        parser = getParserByFunctionName(fun.__name__)
+        parser = getParserByFunction(fun)
         parser.add_argument(*self.args, **self.kwargs)
 
         @wraps(fun)

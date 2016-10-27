@@ -2,7 +2,7 @@ from vincmd import argument
 from vincmd import process, child_command
 
 
-class Demo:
+class DemoOne:
     def __init__(self, cat=False, file=''):
         self.cat = cat
         self.file = file
@@ -24,30 +24,32 @@ class Demo:
         print(nick_name)
 
 
-_demo = Demo()
+class DemoTwo:
+    def __init__(self, path):
+        self.path = path
+
+    @child_command
+    def orange(self):
+        print('DemoTwo:orange ', self.path)
 
 
-@process(commands=[
-    {
-        'exec': _demo.apple,
-        'cmd': 'apple'
-    }, {
-        'exec': _demo.dog,
-        'cmd': 'dog'
-    }])
+@process(classes=[DemoOne, DemoTwo])
 @argument('-c', '--cat', action='store_true')
 @argument('-f', '--file')
-def demo_process(cat, file):
+@argument('-p', '--path')
+def demo_process(demoOne, demoTwo, cat, file, path):
+    print(demoOne.cat)
+    print(demoOne.file)
+    print(demoTwo.path)
     print(cat)
     print(file)
-    _demo.cat = cat
-    _demo.file = file
+    print(path)
     return True
 
 
 if __name__ == '__main__':
     demo_process(sys_argv=True)
 
-    demo = Demo(True, 'bbbb')
+    demo = DemoOne(True, 'bbbb')
     demo.apple('sdf', 'vinson')
     demo.dog('fff', 'vinson')
